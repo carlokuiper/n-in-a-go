@@ -5,14 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"strconv"
 
-	n_in_a_go "github.com/carlokuiper/n-in-a-go"
+	"github.com/carlokuiper/n-in-a-go"
 )
 
 func main() {
-	move := n_in_a_go.Move{
-		X: 2,
-		Y: 0,
+	move := ninago.Move{}
+	if x, err := strconv.Atoi(os.Getenv("X")); err == nil && x != 0 {
+		move.X = x
+	}
+	if y, err := strconv.Atoi(os.Getenv("Y")); err == nil && y != 0 {
+		move.Y = y
 	}
 	body, err := json.Marshal(move)
 	if err != nil {

@@ -5,14 +5,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"strconv"
 
-	n_in_a_go "github.com/carlokuiper/n-in-a-go"
+	"github.com/carlokuiper/n-in-a-go"
 )
 
 func main() {
-	config := n_in_a_go.Config{
-		NInARow:   3,
-		BoardSize: 3,
+	config := ninago.Config{M: 3, N: 3, K: 3}
+	if m, err := strconv.Atoi(os.Getenv("M")); err == nil && m != 0 {
+		config.M = m
+	}
+	if n, err := strconv.Atoi(os.Getenv("N")); err == nil && n != 0 {
+		config.N = n
+	}
+	if k, err := strconv.Atoi(os.Getenv("K")); err == nil && k != 0 {
+		config.K = k
 	}
 	body, err := json.Marshal(config)
 	if err != nil {
