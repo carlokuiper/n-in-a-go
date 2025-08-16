@@ -103,7 +103,7 @@ func (g *Game) nextValue() int {
 		return 1
 	}
 	previousMove := g.History[len(g.History)-1]
-	switch g.Board[previousMove.X][previousMove.Y] {
+	switch g.Board[previousMove.Y][previousMove.X] {
 	case 1:
 		return 2
 	case 2:
@@ -114,11 +114,12 @@ func (g *Game) nextValue() int {
 }
 
 func (g *Game) update(move Move, nextValue int) error {
-	if move.X >= len(g.Board) || move.Y >= len(g.Board) || move.X < 0 || move.Y < 0 {
+	m, n := mxn(g.Board)
+	if move.X < 0 || move.Y < 0 || move.X >= n || move.Y >= m {
 		return fmt.Errorf("move invalid")
 	}
 	if g.History == nil {
-		g.Board[move.X][move.Y] = nextValue
+		g.Board[move.Y][move.X] = nextValue
 		g.History = []Move{move}
 		return nil
 	}
@@ -129,21 +130,17 @@ func (g *Game) update(move Move, nextValue int) error {
 	if g.Finished {
 		return fmt.Errorf("game already finished")
 	}
-	if g.Board[move.X][move.Y] != 0 {
+	if g.Board[move.Y][move.X] != 0 {
 		return fmt.Errorf("move not free")
 	}
-	g.Board[move.X][move.Y] = nextValue
+	g.Board[move.Y][move.X] = nextValue
 	g.History = append(g.History, move)
 	g.Finished = finished(g.Board, g.K)
 	return nil
 }
 
 func finished(board [][]int, k int) bool {
-	n := len(board)
-	if n == 0 {
-		return false
-	}
-	m := len(board[0])
+	m, n := mxn(board)
 	for _, row := range board {
 		if kInARow(row, k) {
 			return true
@@ -160,12 +157,12 @@ func finished(board [][]int, k int) bool {
 	}
 	// (off) diagonal
 	for i := -(n - 1); i < m; i++ {
-		x := 0
-		y := i
+		x := i
+		y := 0
 		offDiagonal := make([]int, 0, n)
 		for range n {
-			if y >= 0 && x >= 0 && y < m && x < n {
-				offDiagonal = append(offDiagonal, board[x][y])
+			if x >= 0 && y >= 0 && x < m && y < n {
+				offDiagonal = append(offDiagonal, board[y][x])
 			}
 			x++
 			y++
@@ -176,21 +173,29 @@ func finished(board [][]int, k int) bool {
 	}
 	// (off) anti diagonal
 	for i := 0; i < m+n; i++ {
-		x := i
-		y := 0
+		x := 0
+		y := i
 		offAntiDiagonal := make([]int, 0, m)
 		for range m {
-			if y >= 0 && x >= 0 && y < m && x < n {
-				offAntiDiagonal = append(offAntiDiagonal, board[x][y])
+			if x >= 0 && y >= 0 && x < m && y < n {
+				offAntiDiagonal = append(offAntiDiagonal, board[y][x])
 			}
-			x--
-			y++
+			x++
+			y--
 		}
 		if kInARow(offAntiDiagonal, k) {
 			return true
 		}
 	}
 	return false
+}
+
+func mxn(board [][]int) (int, int) {
+	n := len(board)
+	if n == 0 {
+		return 0, 0
+	}
+	return len(board[0]), n
 }
 
 func kInARow(row []int, k int) bool {
