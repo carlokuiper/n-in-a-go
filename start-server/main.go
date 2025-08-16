@@ -7,12 +7,12 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/carlokuiper/n-in-a-go"
+	"github.com/carlokuiper/k-in-a-go"
 )
 
 func main() {
-	game := &ninago.Game{}
-	config := ninago.Config{M: 3, N: 3, K: 3}
+	game := &kinago.Game{}
+	config := kinago.Config{M: 3, N: 3, K: 3}
 	if m, err := strconv.Atoi(os.Getenv("M")); err == nil && m != 0 {
 		config.M = m
 	}

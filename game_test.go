@@ -1,4 +1,4 @@
-package ninago
+package kinago
 
 import "testing"
 

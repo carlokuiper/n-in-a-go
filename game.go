@@ -1,4 +1,4 @@
-package ninago
+package kinago
 
 import (
 	"encoding/json"
@@ -8,8 +8,8 @@ import (
 )
 
 type Game struct {
-	nInARow  int
-	board    [][]int
+	kInARow int
+	board   [][]int
 	mu       sync.Mutex
 	history  []Move
 	finished bool
@@ -51,13 +51,13 @@ func (g *Game) update(move Move, nextValue int) error {
 	}
 	g.board[move.X][move.Y] = nextValue
 	g.history = append(g.history, move)
-	g.finished = finished(g.board, g.nInARow)
+	g.finished = finished(g.board, g.kInARow)
 	return nil
 }
 
-func finished(board [][]int, n int) bool {
+func finished(board [][]int, k int) bool {
 	for _, row := range board {
-		if nInARow(row, n) {
+		if kInARow(row, k) {
 			return true
 		}
 	}
@@ -70,7 +70,7 @@ func finished(board [][]int, n int) bool {
 		for j, row := range board {
 			column[j] = row[i]
 		}
-		if nInARow(column, n) {
+		if kInARow(column, k) {
 			return true
 		}
 	}
@@ -85,7 +85,7 @@ func finished(board [][]int, n int) bool {
 			}
 			offDiagonal = append(offDiagonal, board[x+j][y+j])
 		}
-		if nInARow(offDiagonal, n) {
+		if kInARow(offDiagonal, k) {
 			return true
 		}
 	}
@@ -99,7 +99,7 @@ func finished(board [][]int, n int) bool {
 			}
 			offDiagonal = append(offDiagonal, board[x+j][y+j])
 		}
-		if nInARow(offDiagonal, n) {
+		if kInARow(offDiagonal, k) {
 			return true
 		}
 	}
@@ -114,7 +114,7 @@ func finished(board [][]int, n int) bool {
 			}
 			offAntiDiagonal = append(offAntiDiagonal, board[x-j][y+j])
 		}
-		if nInARow(offAntiDiagonal, n) {
+		if kInARow(offAntiDiagonal, k) {
 			return true
 		}
 	}
@@ -128,14 +128,14 @@ func finished(board [][]int, n int) bool {
 			}
 			offAntiDiagonal = append(offAntiDiagonal, board[x-j][y+j])
 		}
-		if nInARow(offAntiDiagonal, n) {
+		if kInARow(offAntiDiagonal, k) {
 			return true
 		}
 	}
 	return false
 }
 
-func nInARow(row []int, n int) bool {
+func kInARow(row []int, k int) bool {
 	var count, lastEl int
 	for _, el := range row {
 		switch el {
@@ -144,7 +144,7 @@ func nInARow(row []int, n int) bool {
 			lastEl = 0
 		case lastEl:
 			count++
-			if count == n {
+			if count == k {
 				return true
 			}
 		default:
@@ -210,7 +210,7 @@ func (g *Game) New(config Config) {
 	for i := range board {
 		board[i] = make([]int, config.M) // for each row add the columns
 	}
-	g.nInARow = config.K
+	g.kInARow = config.K
 	g.board = board
 	g.history = nil
 	g.finished = false

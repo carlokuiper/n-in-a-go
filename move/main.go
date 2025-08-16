@@ -8,11 +8,11 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/carlokuiper/n-in-a-go"
+	"github.com/carlokuiper/k-in-a-go"
 )
 
 func main() {
-	move := ninago.Move{}
+	move := kinago.Move{}
 	if x, err := strconv.Atoi(os.Getenv("X")); err == nil && x != 0 {
 		move.X = x
 	}
