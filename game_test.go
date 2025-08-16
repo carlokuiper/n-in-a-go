@@ -9,14 +9,19 @@ func TestFinished(t *testing.T) {
 		kInARow  int
 		expected bool
 	}{{
-		name:     "unfinished column",
+		name:     "column unfinished",
 		board:    [][]int{{0, 0, 1}, {0, 0, 1}, {0, 0, 0}},
 		kInARow:  3,
 		expected: false,
 	}, {
-		name:     "finished row",
+		name:     "row finished",
 		board:    [][]int{{1, 1, 1}, {0, 0, 0}, {0, 0, 0}},
 		kInARow:  3,
+		expected: true,
+	}, {
+		name:     "anti diagonal finished",
+		board:    [][]int{{0, 1}, {1, 0}},
+		kInARow:  2,
 		expected: true,
 	}, {
 		name:     "off anti diagonal",

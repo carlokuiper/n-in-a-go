@@ -8,8 +8,8 @@ import (
 )
 
 type Game struct {
-	kInARow int
-	board   [][]int
+	kInARow  int
+	board    [][]int
 	mu       sync.Mutex
 	history  []Move
 	finished bool
@@ -56,17 +56,18 @@ func (g *Game) update(move Move, nextValue int) error {
 }
 
 func finished(board [][]int, k int) bool {
+	n := len(board)
+	if n == 0 {
+		return false
+	}
+	m := len(board[0])
 	for _, row := range board {
 		if kInARow(row, k) {
 			return true
 		}
 	}
-	if len(board) == 0 {
-		return false
-	}
-	m := len(board[0])
 	for i := range m {
-		column := make([]int, len(board))
+		column := make([]int, n)
 		for j, row := range board {
 			column[j] = row[i]
 		}
@@ -75,58 +76,32 @@ func finished(board [][]int, k int) bool {
 		}
 	}
 	// (off) diagonal
-	for i := range m {
+	for i := -(n - 1); i < m; i++ {
 		x := 0
 		y := i
-		offDiagonal := make([]int, 0, len(board))
-		for j := range board {
-			if y+j >= m || x+j >= len(board) {
-				continue
+		offDiagonal := make([]int, 0, n)
+		for range n {
+			if y >= 0 && x >= 0 && y < m && x < n {
+				offDiagonal = append(offDiagonal, board[x][y])
 			}
-			offDiagonal = append(offDiagonal, board[x+j][y+j])
-		}
-		if kInARow(offDiagonal, k) {
-			return true
-		}
-	}
-	for i := range board {
-		x := i
-		y := 0
-		offDiagonal := make([]int, 0, len(board))
-		for j := range m {
-			if y+j >= m || x+j >= len(board) {
-				continue
-			}
-			offDiagonal = append(offDiagonal, board[x+j][y+j])
+			x++
+			y++
 		}
 		if kInARow(offDiagonal, k) {
 			return true
 		}
 	}
 	// (off) anti diagonal
-	for i := range board {
-		x := len(board) - 1 - i
+	for i := 0; i < m+n; i++ {
+		x := i
 		y := 0
-		offAntiDiagonal := make([]int, 0, len(board))
-		for j := range m {
-			if x-j < 0 || y+j > m {
-				continue
+		offAntiDiagonal := make([]int, 0, m)
+		for range m {
+			if y >= 0 && x >= 0 && y < m && x < n {
+				offAntiDiagonal = append(offAntiDiagonal, board[x][y])
 			}
-			offAntiDiagonal = append(offAntiDiagonal, board[x-j][y+j])
-		}
-		if kInARow(offAntiDiagonal, k) {
-			return true
-		}
-	}
-	for i := range m {
-		x := len(board) - 1
-		y := i
-		offAntiDiagonal := make([]int, 0, len(board))
-		for j := range board {
-			if x-j < 0 || y+j >= m {
-				continue
-			}
-			offAntiDiagonal = append(offAntiDiagonal, board[x-j][y+j])
+			x--
+			y++
 		}
 		if kInARow(offAntiDiagonal, k) {
 			return true
