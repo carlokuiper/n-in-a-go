@@ -7,20 +7,103 @@ import (
 	"sync"
 )
 
+type Move struct {
+	X int `json:"x"`
+	Y int `json:"y"`
+}
+
 type Game struct {
-	kInARow  int
-	board    [][]int
+	K        int     `json:"k"`
+	Board    [][]int `json:"board"`
+	History  []Move  `json:"history"`
+	Finished bool    `json:"finished"`
 	mu       sync.Mutex
-	history  []Move
-	finished bool
+}
+
+func (g *Game) New(config Config) {
+	board := make([][]int, config.N) // create rows
+	for i := range board {
+		board[i] = make([]int, config.M) // for each row add the columns
+	}
+	g.K = config.K
+	g.Board = board
+	g.History = nil
+	g.Finished = false
+}
+
+func (g *Game) Start(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+	var config Config
+	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+		http.Error(w, "bad request: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer func() { _ = r.Body.Close() }()
+	if !config.valid() {
+		http.Error(w, "invalid config", http.StatusUnprocessableEntity)
+		return
+	}
+	g.mu.Lock()
+	g.New(config)
+	g.mu.Unlock()
+	g.writeResponse(w)
+}
+func (g *Game) Get(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+	response, err := json.Marshal(g)
+	if err != nil {
+		http.Error(w, "cannot marshall response", http.StatusInternalServerError)
+	}
+	_, err = w.Write(response)
+	if err != nil {
+		http.Error(w, "cannot write response", http.StatusInternalServerError)
+	}
+	g.writeResponse(w)
+}
+
+func (g *Game) Move(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+	var move Move
+	if err := json.NewDecoder(r.Body).Decode(&move); err != nil {
+		http.Error(w, "bad request: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer func() { _ = r.Body.Close() }()
+	g.mu.Lock()
+	nextValue := g.nextValue()
+	if nextValue == 0 {
+		http.Error(w, "cannot determine next value", http.StatusInternalServerError)
+	}
+	if err := g.update(move, nextValue); err != nil {
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+	}
+	g.mu.Unlock()
+	g.writeResponse(w)
+}
+
+func (g *Game) writeResponse(w http.ResponseWriter) {
+	response, err := json.Marshal(g)
+	if err != nil {
+		http.Error(w, "cannot marshall response", http.StatusInternalServerError)
+	}
+	_, err = w.Write(response)
+	if err != nil {
+		http.Error(w, "cannot write response", http.StatusInternalServerError)
+	}
 }
 
 func (g *Game) nextValue() int {
-	if g.history == nil {
+	if g.History == nil {
 		return 1
 	}
-	previousMove := g.history[len(g.history)-1]
-	switch g.board[previousMove.X][previousMove.Y] {
+	previousMove := g.History[len(g.History)-1]
+	switch g.Board[previousMove.X][previousMove.Y] {
 	case 1:
 		return 2
 	case 2:
@@ -31,27 +114,27 @@ func (g *Game) nextValue() int {
 }
 
 func (g *Game) update(move Move, nextValue int) error {
-	if move.X >= len(g.board) || move.Y >= len(g.board) || move.X < 0 || move.Y < 0 {
+	if move.X >= len(g.Board) || move.Y >= len(g.Board) || move.X < 0 || move.Y < 0 {
 		return fmt.Errorf("move invalid")
 	}
-	if g.history == nil {
-		g.board[move.X][move.Y] = nextValue
-		g.history = []Move{move}
+	if g.History == nil {
+		g.Board[move.X][move.Y] = nextValue
+		g.History = []Move{move}
 		return nil
 	}
-	previousMove := g.history[len(g.history)-1]
+	previousMove := g.History[len(g.History)-1]
 	if previousMove == move {
 		return nil
 	}
-	if g.finished {
+	if g.Finished {
 		return fmt.Errorf("game already finished")
 	}
-	if g.board[move.X][move.Y] != 0 {
+	if g.Board[move.X][move.Y] != 0 {
 		return fmt.Errorf("move not free")
 	}
-	g.board[move.X][move.Y] = nextValue
-	g.history = append(g.history, move)
-	g.finished = finished(g.board, g.kInARow)
+	g.Board[move.X][move.Y] = nextValue
+	g.History = append(g.History, move)
+	g.Finished = finished(g.Board, g.K)
 	return nil
 }
 
@@ -144,71 +227,4 @@ func (c *Config) valid() bool {
 		return false
 	}
 	return true
-}
-
-type Move struct {
-	X int `json:"x"`
-	Y int `json:"y"`
-}
-
-func (g *Game) Get(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
-	_, err := fmt.Fprintln(w, g)
-	if err != nil {
-		return
-	}
-}
-
-func (g *Game) Start(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
-	var config Config
-	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
-		http.Error(w, "bad request: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	defer func() { _ = r.Body.Close() }()
-	if !config.valid() {
-		http.Error(w, "invalid config", http.StatusUnprocessableEntity)
-		return
-	}
-	g.mu.Lock()
-	g.New(config)
-	g.mu.Unlock()
-}
-
-func (g *Game) New(config Config) {
-	board := make([][]int, config.N) // create rows
-	for i := range board {
-		board[i] = make([]int, config.M) // for each row add the columns
-	}
-	g.kInARow = config.K
-	g.board = board
-	g.history = nil
-	g.finished = false
-}
-
-func (g *Game) Move(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
-	var move Move
-	if err := json.NewDecoder(r.Body).Decode(&move); err != nil {
-		http.Error(w, "bad request: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	defer func() { _ = r.Body.Close() }()
-	g.mu.Lock()
-	nextValue := g.nextValue()
-	if nextValue == 0 {
-		http.Error(w, "cannot determine next value", http.StatusInternalServerError)
-	}
-	err := g.update(move, g.nextValue())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-	}
-	g.mu.Unlock()
 }

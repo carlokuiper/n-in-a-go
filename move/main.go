@@ -33,6 +33,9 @@ func main() {
 		panic(err)
 	}
 	defer func() { _ = response.Body.Close() }()
-	fmt.Println(response.StatusCode)
-	//err = json.NewDecoder(response.Body).Decode(obj)
+	game := kinago.Game{}
+	if err = json.NewDecoder(response.Body).Decode(&game); err != nil {
+		panic(err)
+	}
+	fmt.Println(response.StatusCode, game.Board)
 }
